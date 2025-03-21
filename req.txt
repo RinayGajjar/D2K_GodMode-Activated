@@ -1,0 +1,11 @@
+langchain 
+langchain-community 
+faiss-cpu 
+requests 
+beautifulsoup4 
+sentence-transformers 
+transformers 
+numpy
+phidata
+yfinance
+phi
