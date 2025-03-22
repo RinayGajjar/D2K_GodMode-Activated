@@ -10,7 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 import google.generativeai as genai
 from google.generativeai import upload_file, get_file
-
+import datetime
 load_dotenv()
 
 # Initialize core components

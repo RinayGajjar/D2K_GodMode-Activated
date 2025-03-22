@@ -3,28 +3,15 @@ import os
 import chromadb
 from langchain_community.document_loaders import TextLoader, PyPDFLoader, CSVLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
 
 class DocumentProcessor:
     def __init__(self):
         """Initialize document processor with ChromaDB connection and NLP components"""
-        # Configure based on OS
-        self.host = "localhost" if os.name == "posix" else "host.docker.internal"
-
-        # Initialize Chroma connection
-        self.chroma_client = chromadb.HttpClient(
-            host=self.host,
-            port=9000
-        )
-
-        # Verify connection
-        try:
-            heartbeat = self.chroma_client.heartbeat()
-            print(f"Connected to ChromaDB! Server heartbeat: {heartbeat}")
-        except Exception as e:
-            raise ConnectionError(f"Failed to connect to ChromaDB: {str(e)}")
+        # Initialize Chroma connection in client mode
+        self.chroma_client = chromadb.Client()
 
         # Initialize processing components
         self.text_splitter = CharacterTextSplitter(
