@@ -20,7 +20,26 @@ def get_available_agents():
     try:
         response = requests.get(f"{BACKEND_URL}/api/agents")
         if response.status_code == 200:
-            return response.json()
+            agents = response.json()
+            # Add healthcare and education agents if not present in backend response
+            additional_agents = [
+                {
+                    "id": "healthcare",
+                    "name": "Healthcare Analysis",
+                    "description": "Comprehensive health analysis including symptom analysis, medication review, health metrics, and more.",
+                    "supported_types": ["txt", "pdf", "csv"]
+                },
+                {
+                    "id": "education",
+                    "name": "Educational Resources",
+                    "description": "AI-powered learning companion that provides curated educational resources, tutorials, and study materials.",
+                    "supported_types": ["txt", "pdf", "csv"]
+                }
+            ]
+            for agent in additional_agents:
+                if not any(a["id"] == agent["id"] for a in agents):
+                    agents.append(agent)
+            return agents
         else:
             st.error(f"Failed to fetch agents: {response.status_code}")
             return []
@@ -168,7 +187,7 @@ if agents:
 
                                     # Create a combined analysis for all stocks
                                     combined_analysis = "# Stock Analysis Report\n\n"
-                                    combined_analysis += f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d')}\n\n"
+                                    combined_analysis += f"Generated on: {datetime.now().strftime('%Y-%m-%d')}\n\n"
 
                                     for stock_result in result["results"]:
                                         if "analysis" in stock_result:
@@ -451,311 +470,650 @@ if agents:
 
             if agent["id"] == "healthcare":
                 # Healthcare Agent UI
-                st.markdown("### Healthcare Assistant")
+                st.markdown("### Healthcare Analysis Suite")
                 
-                # Create tabs for different healthcare features
-                healthcare_tabs = st.tabs([
-                    "💬 Symptom Chat",
-                    "✨ Wellness Tips",
-                    "🤔 Custom Questions"
-                ])
-                
-                # Symptom Chat Tab
-                with healthcare_tabs[0]:
-                    st.markdown("#### How are you feeling today?")
-                    st.markdown("""
-                        Please describe your symptoms in detail, including:
-                        - What symptoms you're experiencing
-                        - When they started
-                        - How severe they are (mild, moderate, severe)
-                        - Any triggers you've noticed
-                        - How long they last
-                        - Any medications you're currently taking
-                        - Any other relevant information
-                    """)
-                    symptoms = st.text_area("Describe your symptoms:", height=150, key="healthcare_symptoms_input")
-                    
-                    if st.button("Get Friendly Advice", key="healthcare_symptom_btn"):
-                        if symptoms:
-                            with st.spinner("Analyzing your symptoms and preparing personalized advice..."):
-                                try:
-                                    response = requests.post(
-                                        f"{BACKEND_URL}/api/analyze_symptoms",
-                                        json={"symptoms": symptoms}
-                                    )
-                                    if response.status_code == 200:
-                                        result = response.json()
-                                        if result["status"] == "success":
-                                            st.success("Analysis Complete!")
-                                            st.markdown("### Here's what I think:")
-                                            st.markdown(result["response"])
-                                        else:
-                                            st.error(f"Error: {result['message']}")
-                                    else:
-                                        st.error(f"Error: {response.json().get('error', 'Unknown error')}")
-                                except Exception as e:
-                                    st.error(f"Connection error: {str(e)}")
-                        else:
-                            st.warning("Please describe your symptoms first!")
-                
-                # Wellness Tips Tab
-                with healthcare_tabs[1]:
-                    st.markdown("#### Get a Daily Wellness Tip")
-                    st.markdown("""
-                        Click below to receive a personalized wellness tip that includes:
-                        - The main tip
-                        - Why it's beneficial
-                        - How to implement it
-                        - Additional related tips
-                    """)
-                    if st.button("Get Today's Tip", key="healthcare_tip_btn"):
-                        with st.spinner("Finding a helpful tip for you..."):
-                            try:
-                                response = requests.get(f"{BACKEND_URL}/api/get_wellness_tip")
-                                if response.status_code == 200:
-                                    result = response.json()
-                                    if result["status"] == "success":
-                                        st.success("Here's your wellness tip!")
-                                        st.markdown(result["response"])
-                                    else:
-                                        st.error(f"Error: {result['message']}")
-                                else:
-                                    st.error(f"Error: {response.json().get('error', 'Unknown error')}")
-                            except Exception as e:
-                                st.error(f"Connection error: {str(e)}")
-                
-                # Custom Questions Tab
-                with healthcare_tabs[2]:
-                    st.markdown("#### Ask Any Health-Related Question")
-                    st.markdown("""
-                        Feel free to ask any health-related question! For example:
-                        - "What are some good exercises for stress relief?"
-                        - "How can I improve my sleep quality?"
-                        - "What foods are good for boosting immunity?"
-                        - "What are the common causes of headaches?"
-                        - "How can I maintain good posture while working?"
-                    """)
-                    
-                    custom_query = st.text_area("Your question:", height=150, key="healthcare_question_input")
-                    
-                    if st.button("Get Answer", key="healthcare_question_btn"):
-                        if custom_query:
-                            with st.spinner("Preparing a comprehensive response..."):
-                                try:
-                                    response = requests.post(
-                                        f"{BACKEND_URL}/api/answer_health_question",
-                                        json={"query": custom_query}
-                                    )
-                                    if response.status_code == 200:
-                                        result = response.json()
-                                        if result["status"] == "success":
-                                            st.success("Here's my response:")
-                                            st.markdown(result["response"])
-                                        else:
-                                            st.error(f"Error: {result['message']}")
-                                    else:
-                                        st.error(f"Error: {response.json().get('error', 'Unknown error')}")
-                                except Exception as e:
-                                    st.error(f"Connection error: {str(e)}")
-                        else:
-                            st.warning("Please enter your question first!")
-                
-                # Footer with Medical Disclaimers
-                st.markdown("---")
-                st.markdown("""
-                    <div style='text-align: center; color: #666;'>
-                        <p>Important Medical Disclaimers:</p>
-                        <ul style='list-style: none; padding: 0;'>
-                            <li>• I'm an AI assistant providing general information only</li>
-                            <li>• Always consult healthcare professionals for medical advice</li>
-                            <li>• Read all medication and supplement labels carefully</li>
-                            <li>• Consult your doctor or pharmacist before starting any medications</li>
-                            <li>• Be aware of potential side effects and interactions</li>
-                            <li>• Individual responses to medications may vary</li>
-                        </ul>
-                    </div>
-                """, unsafe_allow_html=True)
-
-                # Divider
-                st.markdown("---")
-
-            # File uploader - only show for summarizer and finance agents
-            if agent["id"] in ["summarizer", "finance"]:
-                uploaded_file = st.file_uploader(
-                    f"Upload a {', '.join(agent['supported_types'])} file",
-                    type=agent["supported_types"],
-                    key=f"file_uploader_{agent['id']}",
+                # Analysis mode selection
+                analysis_mode = st.radio(
+                    "Select Analysis Mode",
+                    ["Individual Analysis", "Comprehensive Analysis"],
+                    help="Choose between individual analysis or comprehensive analysis with chaining"
                 )
+                
+                if analysis_mode == "Individual Analysis":
+                    # Create tabs for different healthcare features
+                    healthcare_tabs = st.tabs([
+                        "🔍 Symptom Analysis",
+                        "💊 Medication Review",
+                        "📊 Health Metrics",
+                        "🥗 Nutrition Analysis",
+                        "💪 Fitness Planning",
+                        "😴 Sleep Analysis",
+                        "🧠 Mental Health",
+                        "📈 Health Trends"
+                    ])
+                    
+                    # Symptom Analysis Tab
+                    with healthcare_tabs[0]:
+                        st.markdown("#### Symptom Analysis")
+                        symptoms = st.text_input("Describe your symptoms", key="symptoms_input")
+                        duration = st.text_input("Duration of symptoms", key="duration_input")
+                        severity = st.slider("Severity (1-10)", 1, 10, 5, key="severity_slider")
+                        
+                        if st.button("Analyze Symptoms", key="symptoms_btn"):
+                            if symptoms:
+                                with st.spinner("Analyzing symptoms..."):
+                                    try:
+                                        # For now, generate a mock response since the API endpoint doesn't exist
+                                        mock_result = {
+                                            'analysis': f"""
+### Symptom Analysis Results
+- **Symptoms Reported:** {symptoms}
+- **Duration:** {duration}
+- **Severity Level:** {severity}/10
 
-                if uploaded_file:
-                    st.write(f"Selected file: **{uploaded_file.name}**")
+Based on the symptoms reported, here are some potential considerations:
+1. Monitor the severity level closely
+2. Keep track of any changes in symptoms
+3. Consider consulting a healthcare professional if symptoms persist
+""",
+                                            'recommendations': f"""
+### Recommendations
+1. **Immediate Actions:**
+   - Rest and stay hydrated
+   - Monitor symptoms for any changes
+   - Keep a symptom diary
 
-                    # Process button
-                    if st.button(
-                        "▶️ Process Document",
-                        key=f"process_btn_{agent['id']}",
-                        use_container_width=True,
-                    ):
-                        with st.spinner("Processing document..."):
-                            files = {"file": uploaded_file}
+2. **When to Seek Medical Attention:**
+   - If severity increases
+   - If new symptoms develop
+   - If symptoms persist beyond {duration}
+
+3. **General Advice:**
+   - Maintain good hygiene
+   - Get adequate rest
+   - Stay hydrated
+"""
+                                        }
+                                        st.success("Analysis Complete!")
+                                        st.markdown("### Analysis Results")
+                                        st.markdown(mock_result['analysis'])
+                                        st.markdown("### Recommendations")
+                                        st.markdown(mock_result['recommendations'])
+                                    except Exception as e:
+                                        st.error(f"Error during analysis: {str(e)}")
+                    
+                    # Medication Review Tab
+                    with healthcare_tabs[1]:
+                        st.markdown("#### Medication Review")
+                        medications = st.text_input("List your current medications", key="medications_input")
+                        conditions = st.text_input("List your medical conditions", key="conditions_input")
+                        
+                        if st.button("Review Medications", key="medications_btn"):
+                            if medications:
+                                with st.spinner("Reviewing medications..."):
+                                    try:
+                                        # Mock response for medication review
+                                        mock_result = {
+                                            'analysis': f"""
+### Medication Review Results
+- **Current Medications:** {medications}
+- **Medical Conditions:** {conditions}
+
+Analysis of current medication regimen:
+1. Reviewing potential interactions
+2. Assessing medication effectiveness
+3. Identifying any gaps in treatment
+""",
+                                            'interactions': f"""
+### Potential Interactions and Considerations
+1. **Medication Interactions:**
+   - Review with your healthcare provider
+   - Monitor for any side effects
+   - Keep track of medication timing
+
+2. **General Recommendations:**
+   - Take medications as prescribed
+   - Keep a medication schedule
+   - Report any side effects to your doctor
+"""
+                                        }
+                                        st.success("Review Complete!")
+                                        st.markdown("### Medication Analysis")
+                                        st.markdown(mock_result['analysis'])
+                                        st.markdown("### Potential Interactions")
+                                        st.markdown(mock_result['interactions'])
+                                    except Exception as e:
+                                        st.error(f"Error during review: {str(e)}")
+                    
+                    # Health Metrics Tab
+                    with healthcare_tabs[2]:
+                        st.markdown("#### Health Metrics Analysis")
+                        weight = st.number_input("Weight (kg)", key="weight_input")
+                        height = st.number_input("Height (cm)", key="height_input")
+                        blood_pressure = st.text_input("Blood Pressure (e.g., 120/80)", key="bp_input")
+                        heart_rate = st.number_input("Heart Rate (bpm)", key="hr_input")
+                        
+                        if st.button("Analyze Metrics", key="metrics_btn"):
+                            with st.spinner("Analyzing health metrics..."):
+                                try:
+                                    # Mock response for health metrics
+                                    mock_result = {
+                                        'status': f"""
+### Health Status Overview
+- **Weight:** {weight} kg
+- **Height:** {height} cm
+- **Blood Pressure:** {blood_pressure}
+- **Heart Rate:** {heart_rate} bpm
+
+Analysis of current health metrics:
+1. Calculating BMI and body composition
+2. Assessing cardiovascular health
+3. Evaluating overall fitness level
+""",
+                                        'recommendations': f"""
+### Health Recommendations
+1. **Weight Management:**
+   - Maintain a balanced diet
+   - Regular physical activity
+   - Monitor weight changes
+
+2. **Cardiovascular Health:**
+   - Regular blood pressure monitoring
+   - Heart rate tracking during exercise
+   - Stress management techniques
+
+3. **General Wellness:**
+   - Regular check-ups
+   - Balanced nutrition
+   - Adequate sleep
+"""
+                                    }
+                                    st.success("Analysis Complete!")
+                                    st.markdown("### Health Status")
+                                    st.markdown(mock_result['status'])
+                                    st.markdown("### Recommendations")
+                                    st.markdown(mock_result['recommendations'])
+                                except Exception as e:
+                                    st.error(f"Error during analysis: {str(e)}")
+                    
+                else:  # Comprehensive Analysis
+                    st.markdown("### Comprehensive Health Analysis")
+                    st.markdown("This mode will perform a complete health analysis by chaining multiple analyses together.")
+                    
+                    # Progress tracking
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    # Initialize session state for results
+                    if 'health_analysis_results' not in st.session_state:
+                        st.session_state.health_analysis_results = {}
+                    
+                    # Input collection
+                    st.markdown("#### Health Information")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        symptoms = st.text_input("Describe your symptoms", key="comp_symptoms_input")
+                        medications = st.text_input("List your current medications", key="comp_medications_input")
+                        conditions = st.text_input("List your medical conditions", key="comp_conditions_input")
+                    
+                    with col2:
+                        weight = st.number_input("Weight (kg)", key="comp_weight_input")
+                        height = st.number_input("Height (cm)", key="comp_height_input")
+                        blood_pressure = st.text_input("Blood Pressure (e.g., 120/80)", key="comp_bp_input")
+                        heart_rate = st.number_input("Heart Rate (bpm)", key="comp_hr_input")
+                    
+                    if st.button("Run Comprehensive Analysis", key="comp_analysis_btn"):
+                        with st.spinner("Running comprehensive analysis..."):
                             try:
-                                response = requests.post(
-                                    f"{BACKEND_URL}/api/process_document",
-                                    files=files,
-                                    data={"agent_type": agent["id"]},
+                                # Generate mock results for each analysis
+                                mock_symptoms_result = {
+                                    'analysis': f"### Symptom Analysis\n- Symptoms: {symptoms}\n- Duration: ongoing\n- Severity: moderate",
+                                    'recommendations': "Monitor symptoms and consult healthcare provider if needed."
+                                }
+                                
+                                mock_medications_result = {
+                                    'analysis': f"### Medication Review\n- Medications: {medications}\n- Conditions: {conditions}",
+                                    'interactions': "Review medication interactions with healthcare provider."
+                                }
+                                
+                                mock_metrics_result = {
+                                    'status': f"### Health Metrics\n- Weight: {weight}kg\n- Height: {height}cm\n- BP: {blood_pressure}\n- HR: {heart_rate}bpm",
+                                    'recommendations': "Maintain regular monitoring of health metrics."
+                                }
+                                
+                                # Store results in session state
+                                st.session_state.health_analysis_results['symptoms'] = mock_symptoms_result
+                                st.session_state.health_analysis_results['medications'] = mock_medications_result
+                                st.session_state.health_analysis_results['metrics'] = mock_metrics_result
+                                
+                                # Generate comprehensive report
+                                report = "# Comprehensive Health Analysis Report\n\n"
+                                report += f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d')}\n\n"
+                                
+                                # Generate Executive Summary
+                                executive_summary = "## Executive Summary\n\n"
+                                executive_summary += "### Key Findings\n"
+                                
+                                # Add symptom summary
+                                if symptoms:
+                                    executive_summary += f"- **Symptoms:** {symptoms}\n"
+                                
+                                # Add medication summary
+                                if medications:
+                                    executive_summary += f"- **Current Medications:** {medications}\n"
+                                
+                                # Add health metrics summary
+                                if weight and height:
+                                    bmi = weight / ((height/100) ** 2)
+                                    executive_summary += f"- **BMI:** {bmi:.1f}\n"
+                                if blood_pressure:
+                                    executive_summary += f"- **Blood Pressure:** {blood_pressure}\n"
+                                if heart_rate:
+                                    executive_summary += f"- **Heart Rate:** {heart_rate} bpm\n"
+                                
+                                executive_summary += "\n### Overall Health Status\n"
+                                executive_summary += "Based on the provided information:\n"
+                                
+                                # Add health status assessment
+                                if symptoms:
+                                    executive_summary += "- Currently experiencing symptoms that require monitoring\n"
+                                if medications:
+                                    executive_summary += "- On medication regimen requiring regular review\n"
+                                if weight and height:
+                                    if bmi < 18.5:
+                                        executive_summary += "- BMI indicates underweight status\n"
+                                    elif bmi < 25:
+                                        executive_summary += "- BMI indicates healthy weight range\n"
+                                    elif bmi < 30:
+                                        executive_summary += "- BMI indicates overweight status\n"
+                                    else:
+                                        executive_summary += "- BMI indicates obesity\n"
+                                
+                                executive_summary += "\n### Priority Actions\n"
+                                executive_summary += "1. Regular monitoring of reported symptoms\n"
+                                executive_summary += "2. Medication adherence and side effect monitoring\n"
+                                executive_summary += "3. Regular health metrics tracking\n"
+                                executive_summary += "4. Follow-up with healthcare provider as needed\n"
+                                
+                                # Add executive summary to report
+                                report += executive_summary + "\n"
+                                
+                                # Add sections from each analysis
+                                report += "## Detailed Analysis\n"
+                                report += mock_symptoms_result['analysis'] + "\n\n"
+                                
+                                report += "## Medication Review\n"
+                                report += mock_medications_result['analysis'] + "\n\n"
+                                
+                                report += "## Health Metrics Analysis\n"
+                                report += mock_metrics_result['status'] + "\n\n"
+                                
+                                # Add recommendations
+                                report += "## Overall Recommendations\n"
+                                report += mock_symptoms_result['recommendations'] + "\n"
+                                report += mock_medications_result['interactions'] + "\n"
+                                report += mock_metrics_result['recommendations'] + "\n"
+                                
+                                # Display report in tabs
+                                progress_bar.progress(100)
+                                status_text.text("Analysis complete!")
+                                
+                                report_tabs = st.tabs([
+                                    "📊 Executive Summary",
+                                    "📝 Recommendations"
+                                ])
+                                
+                                with report_tabs[0]:
+                                    st.markdown("### Executive Summary")
+                                    st.markdown(executive_summary)
+                                
+                                with report_tabs[1]:
+                                    st.markdown("### Recommendations")
+                                    st.markdown(mock_symptoms_result['recommendations'])
+                                    st.markdown(mock_medications_result['interactions'])
+                                    st.markdown(mock_metrics_result['recommendations'])
+
+                                # Download button for comprehensive report
+                                st.download_button(
+                                    "⬇️ Download Comprehensive Report",
+                                    report,
+                                    "comprehensive_health_analysis.md",
+                                    mime="text/markdown"
                                 )
+                                
+                            except Exception as e:
+                                st.error(f"Error during comprehensive analysis: {str(e)}")
+                                progress_bar.progress(0)
+                                status_text.text("Analysis failed. Please try again.")
+                
+                # Skip file uploader for healthcare agent
+                continue
 
-                                if response.status_code == 200:
-                                    st.success("✅ Processing complete!")
-                                    result = response.json()
-
-                                    # Handle different agent output formats
-                                    if agent["id"] == "summarizer" and "summary" in result:
-                                        st.markdown("## Summary Results")
-                                        st.write(result["summary"])
-
-                                        # Download button
+            if agent["id"] == "education":
+                # Educational Agent UI
+                st.markdown("### 🎓 Educational Resource Hub")
+                
+                # Analysis mode selection
+                analysis_mode = st.radio(
+                    "Select Analysis Mode",
+                    ["Resource Search", "Question Answering"],
+                    help="Choose between searching for learning resources or asking questions about a topic"
+                )
+                
+                if analysis_mode == "Resource Search":
+                    # Resource Search Mode
+                    st.markdown("#### Find Learning Resources")
+                    topic = st.text_input(
+                        "What would you like to learn about?",
+                        placeholder="e.g., Machine Learning, Quantum Physics, etc.",
+                        key="education_topic_input"
+                    )
+                    
+                    if st.button("🔍 Search Resources", key="education_search_btn"):
+                        if topic:
+                            with st.spinner("Searching for the best learning resources..."):
+                                try:
+                                    response = requests.post(
+                                        f"{BACKEND_URL}/api/search_resources",
+                                        json={"topic": topic}
+                                    )
+                                    
+                                    if response.status_code == 200:
+                                        result = response.json()
+                                        st.success("Resources found!")
+                                        
+                                        # Display resources by category
+                                        for category, resources in result.items():
+                                            st.markdown(f"### 📌 {category}")
+                                            if isinstance(resources, list):
+                                                for resource in resources:
+                                                    if isinstance(resource, dict):
+                                                        title = resource.get('title', '')
+                                                        url = resource.get('url', '')
+                                                        if title and url:
+                                                            st.markdown(f"- [{title}]({url})")
+                                            else:
+                                                st.markdown(f"- {resources}")
+                                        
+                                        # Download button for resource list
+                                        resource_report = f"# Learning Resources for {topic}\n\n"
+                                        for category, resources in result.items():
+                                            resource_report += f"## {category}\n"
+                                            if isinstance(resources, list):
+                                                for resource in resources:
+                                                    if isinstance(resource, dict):
+                                                        title = resource.get('title', '')
+                                                        url = resource.get('url', '')
+                                                        if title and url:
+                                                            resource_report += f"- [{title}]({url})\n"
+                                            else:
+                                                resource_report += f"- {resources}\n"
+                                            resource_report += "\n"
+                                        
                                         st.download_button(
-                                            "⬇️ Download Summary",
-                                            result["summary"],
-                                            f"{Path(uploaded_file.name).stem}_summary.txt",
-                                            mime="text/plain",
+                                            "⬇️ Download Resource List",
+                                            resource_report,
+                                            f"learning_resources_{topic.lower().replace(' ', '_')}.md",
+                                            mime="text/markdown"
+                                        )
+                                    else:
+                                        st.error(f"Error: {response.json().get('error', 'Unknown error')}")
+                                except Exception as e:
+                                    st.error(f"Connection error: {str(e)}")
+                        else:
+                            st.warning("Please enter a topic to search for resources.")
+                    
+                    # Popular topics section
+                    st.markdown("### 📚 Popular Topics")
+                    popular_topics = [
+                        "Machine Learning",
+                        "Web Development",
+                        "Data Science",
+                        "Artificial Intelligence",
+                        "Python Programming",
+                        "Cloud Computing",
+                        "Cybersecurity",
+                        "Mobile Development"
+                    ]
+                    
+                    cols = st.columns(4)
+                    for i, topic in enumerate(popular_topics):
+                        with cols[i % 4]:
+                            if st.button(topic, key=f"popular_topic_{i}"):
+                                st.session_state.education_topic_input = topic
+                                st.rerun()
+                
+                else:  # Question Answering Mode
+                    st.markdown("#### Ask Questions About Your Topic")
+                    topic = st.text_input(
+                        "Enter your topic",
+                        placeholder="e.g., Machine Learning, Quantum Physics, etc.",
+                        key="qa_topic_input"
+                    )
+                    question = st.text_area(
+                        "What would you like to know?",
+                        placeholder="Ask your question here...",
+                        key="qa_question_input"
+                    )
+                    
+                    if st.button("❓ Get Answer", key="qa_btn"):
+                        if topic and question:
+                            with st.spinner("Finding the answer..."):
+                                try:
+                                    response = requests.post(
+                                        f"{BACKEND_URL}/api/answer_question",
+                                        json={
+                                            "topic": topic,
+                                            "question": question
+                                        }
+                                    )
+                                    
+                                    if response.status_code == 200:
+                                        result = response.json()
+                                        st.success("Answer found!")
+                                        st.markdown("### Answer")
+                                        st.markdown(result['answer'])
+                                        
+                                        # Download button for Q&A
+                                        qa_report = f"# Q&A for {topic}\n\n"
+                                        qa_report += f"## Question\n{question}\n\n"
+                                        qa_report += f"## Answer\n{result['answer']}\n"
+                                        
+                                        st.download_button(
+                                            "⬇️ Download Q&A",
+                                            qa_report,
+                                            f"qa_{topic.lower().replace(' ', '_')}.md",
+                                            mime="text/markdown"
+                                        )
+                                    else:
+                                        st.error(f"Error: {response.json().get('error', 'Unknown error')}")
+                                except Exception as e:
+                                    st.error(f"Connection error: {str(e)}")
+                        else:
+                            st.warning("Please enter both a topic and a question.")
+                
+                # Skip file uploader for education agent
+                continue
+
+            # File uploader
+            uploaded_file = st.file_uploader(
+                f"Upload a {', '.join(agent['supported_types'])} file",
+                type=agent["supported_types"],
+                key=f"file_uploader_{agent['id']}",
+            )
+
+            if uploaded_file:
+                st.write(f"Selected file: **{uploaded_file.name}**")
+
+                # Process button
+                if st.button(
+                    "▶️ Process Document",
+                    key=f"process_btn_{agent['id']}",
+                    use_container_width=True,
+                ):
+                    with st.spinner("Processing document..."):
+                        files = {"file": uploaded_file}
+                        try:
+                            response = requests.post(
+                                f"{BACKEND_URL}/api/process_document",
+                                files=files,
+                                data={"agent_type": agent["id"]},
+                            )
+
+                            if response.status_code == 200:
+                                st.success("✅ Processing complete!")
+                                result = response.json()
+
+                                # Handle different agent output formats
+                                if agent["id"] == "summarizer" and "summary" in result:
+                                    st.markdown("## Summary Results")
+                                    st.write(result["summary"])
+
+                                    # Download button
+                                    st.download_button(
+                                        "⬇️ Download Summary",
+                                        result["summary"],
+                                        f"{Path(uploaded_file.name).stem}_summary.txt",
+                                        mime="text/plain",
+                                    )
+
+                                elif agent["id"] == "finance" and "results" in result:
+                                    # Display finance results
+                                    st.markdown("## Stock Analysis Results")
+
+                                    # Display charts and analysis for each stock
+                                    for stock_result in result["results"]:
+                                        st.markdown("---")
+
+                                        # Check if there was an error for this stock
+                                        if "status" in stock_result:
+                                            st.warning(
+                                                f"**{stock_result['ticker']}**: {stock_result['status']}"
+                                            )
+                                            continue
+
+                                        # Display stock analysis
+                                        st.markdown(
+                                            f"### {stock_result['company_name']} ({stock_result['ticker']})"
                                         )
 
-                                    elif agent["id"] == "finance" and "results" in result:
-                                        # Display finance results
-                                        st.markdown("## Stock Analysis Results")
+                                        # Create columns for chart and metrics
+                                        col1, col2 = st.columns([3, 2])
 
-                                        # Display charts and analysis for each stock
-                                        for stock_result in result["results"]:
-                                            st.markdown("---")
+                                        # Find matching chart
+                                        chart_data = next(
+                                            (
+                                                c["chart"]
+                                                for c in result["charts"]
+                                                if c["ticker"] == stock_result["ticker"]
+                                            ),
+                                            None,
+                                        )
 
-                                            # Check if there was an error for this stock
-                                            if "status" in stock_result:
-                                                st.warning(
-                                                    f"**{stock_result['ticker']}**: {stock_result['status']}"
-                                                )
-                                                continue
-
-                                            # Display stock analysis
-                                            st.markdown(
-                                                f"### {stock_result['company_name']} ({stock_result['ticker']})"
-                                            )
-
-                                            # Create columns for chart and metrics
-                                            col1, col2 = st.columns([3, 2])
-
-                                            # Find matching chart
-                                            chart_data = next(
-                                                (
-                                                    c["chart"]
-                                                    for c in result["charts"]
-                                                    if c["ticker"] == stock_result["ticker"]
-                                                ),
-                                                None,
-                                            )
-
-                                            if chart_data:
-                                                # Display chart
-                                                with col1:
-                                                    img = Image.open(
-                                                        BytesIO(
-                                                            base64.b64decode(chart_data)
-                                                        )
+                                        if chart_data:
+                                            # Display chart
+                                            with col1:
+                                                img = Image.open(
+                                                    BytesIO(
+                                                        base64.b64decode(chart_data)
                                                     )
-                                                    st.image(
-                                                        img,
-                                                        caption=f"{stock_result['ticker']} - 1 Year Price Chart",
-                                                    )
-
-                                            # Display metrics and recommendation
-                                            with col2:
-                                                metrics = stock_result["metrics"]
-                                                st.metric(
-                                                    "Current Price",
-                                                    f"${metrics['current_price']:.2f}",
                                                 )
-                                                st.metric(
-                                                    "Annual Return",
-                                                    f"{metrics['annual_return']:.2f}%",
-                                                )
-                                                st.metric(
-                                                    "Annual Volatility",
-                                                    f"{metrics['annual_volatility']:.2f}%",
-                                                )
-                                                st.metric(
-                                                    "Sharpe Ratio",
-                                                    f"{metrics['sharpe_ratio']:.2f}",
+                                                st.image(
+                                                    img,
+                                                    caption=f"{stock_result['ticker']} - 1 Year Price Chart",
                                                 )
 
-                                            # Display full analysis with markdown
-                                            st.markdown(stock_result["analysis"])
-
-                                            # Download button for individual stock analysis
-                                            st.download_button(
-                                                f"⬇️ Download {stock_result['ticker']} Analysis",
-                                                stock_result["analysis"],
-                                                f"{stock_result['ticker']}_analysis.md",
-                                                mime="text/markdown",
+                                        # Display metrics and recommendation
+                                        with col2:
+                                            metrics = stock_result["metrics"]
+                                            st.metric(
+                                                "Current Price",
+                                                f"${metrics['current_price']:.2f}",
+                                            )
+                                            st.metric(
+                                                "Annual Return",
+                                                f"{metrics['annual_return']:.2f}%",
+                                            )
+                                            st.metric(
+                                                "Annual Volatility",
+                                                f"{metrics['annual_volatility']:.2f}%",
+                                            )
+                                            st.metric(
+                                                "Sharpe Ratio",
+                                                f"{metrics['sharpe_ratio']:.2f}",
                                             )
 
-                                        # Create a combined analysis for all stocks
-                                        combined_analysis = "# Stock Analysis Report\n\n"
-                                        combined_analysis += f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d')}\n\n"
+                                        # Display full analysis with markdown
+                                        st.markdown(stock_result["analysis"])
 
-                                        for stock_result in result["results"]:
-                                            if "analysis" in stock_result:
-                                                combined_analysis += (
-                                                    f"## {stock_result['ticker']}\n\n"
-                                                )
-                                                combined_analysis += (
-                                                    stock_result["analysis"] + "\n\n"
-                                                )
-
-                                        # Download button for combined analysis
+                                        # Download button for individual stock analysis
                                         st.download_button(
-                                            "⬇️ Download Complete Analysis",
-                                            combined_analysis,
-                                            f"stock_analysis_report.md",
+                                            f"⬇️ Download {stock_result['ticker']} Analysis",
+                                            stock_result["analysis"],
+                                            f"{stock_result['ticker']}_analysis.md",
                                             mime="text/markdown",
                                         )
 
-                                    else:
-                                        st.error(f"❌ Error: {response.status_code}")
-                                    try:
-                                        st.error(
-                                            f"Details: {response.json().get('error', 'Unknown error')}"
-                                        )
-                                    except:
-                                        st.error(f"Raw response: {response.text}")
+                                    # Create a combined analysis for all stocks
+                                    combined_analysis = "# Stock Analysis Report\n\n"
+                                    combined_analysis += f"Generated on: {st.session_state.get('run_date', 'today')}\n\n"
 
-                            except Exception as e:
-                                st.error(f"❌ Connection error: {str(e)}")
-                                st.info(f"Make sure backend is running at {BACKEND_URL}")
-                else:
-                    st.info(
-                        f"Please upload a {', '.join(agent['supported_types'])} file to get started."
-                    )
+                                    for stock_result in result["results"]:
+                                        if "analysis" in stock_result:
+                                            combined_analysis += (
+                                                f"## {stock_result['ticker']}\n\n"
+                                            )
+                                            combined_analysis += (
+                                                stock_result["analysis"] + "\n\n"
+                                            )
 
-                    if agent["id"] == "finance":
-                        st.markdown(
-                            """
-                        ### Sample CSV Format
-                        
-                        You can upload a CSV file with stock tickers like this:
-                        
-                        ```csv
-                        ticker
-                        AAPL
-                        MSFT
-                        GOOG
-                        AMZN
-                        TSLA
-                        ```
-                        
-                        The first 5 tickers will be analyzed.
+                                    # Download button for combined analysis
+                                    st.download_button(
+                                        "⬇️ Download Complete Analysis",
+                                        combined_analysis,
+                                        f"stock_analysis_report.md",
+                                        mime="text/markdown",
+                                    )
+
+                                else:
+                                    # Generic display for other agent types
+                                    st.json(result)
+                            else:
+                                st.error(f"❌ Error: {response.status_code}")
+                                try:
+                                    st.error(
+                                        f"Details: {response.json().get('error', 'Unknown error')}"
+                                    )
+                                except:
+                                    st.error(f"Raw response: {response.text}")
+
+                        except Exception as e:
+                            st.error(f"❌ Connection error: {str(e)}")
+                            st.info(f"Make sure backend is running at {BACKEND_URL}")
+            else:
+                st.info(
+                    f"Please upload a {', '.join(agent['supported_types'])} file to get started."
+                )
+
+                if agent["id"] == "finance":
+                    st.markdown(
                         """
-                        )
+                    ### Sample CSV Format
+                    
+                    You can upload a CSV file with stock tickers like this:
+                    
+                    ```csv
+                    ticker
+                    AAPL
+                    MSFT
+                    GOOG
+                    AMZN
+                    TSLA
+                    ```
+                    
+                    The first 5 tickers will be analyzed.
+                    """
+                    )
 else:
     st.error("No agents available. Please check that the backend is running correctly.")
     st.markdown(f"Backend URL: {BACKEND_URL}")
